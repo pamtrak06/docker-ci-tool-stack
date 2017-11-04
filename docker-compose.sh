@@ -89,6 +89,7 @@ function docker-compose-cmd {
 # Function for docker build
 function docker-build {
   cd $HOME_PATH/jenkins && edjangertemplate --configure=configuration && edjangerbuild
+  cd $HOME_PATH/nexus && edjangertemplate --configure=configuration && edjangerbuild
   cd $HOME_PATH/sonar/sonar-db && edjangertemplate --configure=configuration && edjangerbuild
   cd $HOME_PATH/sonar/sonar-server && edjangertemplate --configure=configuration && edjangerbuild
   cd $HOME_PATH
@@ -105,6 +106,6 @@ clean-workspace
 #docker-compose-cmd "pull"
 #docker-compose-cmd "build"
 docker-build
-#docker-compose-cmd "up -d"
-#docker-compose-cmd "logs -f --tail 100"
+docker-compose-cmd "up -d"
+docker-compose-cmd "logs -f --tail 100"
 
