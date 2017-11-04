@@ -18,6 +18,23 @@ services:
         delay: 10s
       restart_policy:
         condition: on-failure
+		
+  artifactory:
+    build: $PWD/artifactory/build
+    ports:
+      - "${artifactory_port_8080}:8080"
+      - "${artifactory_port_8081}:8081"
+    volumes:
+      - $PWD/jenkins/volumes/artifactory:/var/opt/jfrog/artifactory
+    networks:
+      - prodnetwork
+    deploy:
+      replicas: 6
+      update_config:
+        parallelism: 2
+        delay: 10s
+      restart_policy:
+        condition: on-failure
         
   jenkins:
     build: $PWD/jenkins/build
