@@ -1,0 +1,114 @@
+version: '3'
+
+networks:
+  prodnetwork:
+    driver: bridge
+
+services:
+ nexus:
+  build: $PWD/nexus/build
+  ports:
+    - "${nexus_port_8081}:8081"
+  networks:
+    - prodnetwork
+  deploy:
+    replicas: 6
+    update_config:
+      parallelism: 2
+      delay: 10s
+    restart_policy:
+      condition: on-failure
+
+ jenkins:
+  build: $PWD/jenkins/build
+  ports:
+    - "${jenkins_port_5000}:5000"
+    - "${jenkins_port_8080}:8080"
+    - "${jenkins_port_8090}:8090"
+  networks:
+    - prodnetwork
+  volumes:
+    - /var/run/docker.sock:/var/run/docker.sock
+    - /usr/local/bin/docker:/usr/bin/docker
+    - $PWD/jenkins/volumes/jenkins_home:/var/jenkins_home
+  depends_on:
+    - nexus
+    - gitlab
+    - sonar
+  environment:
+    - NEXUS_PORT=8081
+    - SONAR_PORT=9000
+    - SONAR_DB_PORT=5432
+  deploy:
+    replicas: 6
+    update_config:
+      parallelism: 2
+      delay: 10s
+    restart_policy:
+      condition: on-failure
+
+ sonar:
+  build: $PWD/sonar/sonar-server/build
+  ports:
+   - "${sonar_port_9000}:9000"
+   - "${sonar_port_9082}:9092"
+  networks:
+    - prodnetwork
+  depends_on:
+    - sonardb
+  environment:
+   - SONARQUBE_JDBC_URL=jdbc:postgresql://sonardb:5432/${jdbc_dbname}
+   - SONARQUBE_JDBC_USERNAME=${jdbc_username}
+   - SONARQUBE_JDBC_PASSWORD=${jdbc_password}
+  volumes:
+    - $PWD/sonar/sonar-server/volumes/data:/opt/sonarqube/data
+    - $PWD/sonar/sonar-server/volumes/logs:/opt/sonarqube/logs   
+ deploy:
+   replicas: 6
+   update_config:
+     parallelism: 2
+     delay: 10s
+   restart_policy:
+     condition: on-failure
+ 
+ sonardb:
+  networks:
+    - prodnetwork
+  image: postgres
+  environment:
+   - POSTGRES_DB=${jdbc_dbname}
+   - POSTGRES_USER=${jdbc_username}
+   - POSTGRES_PASSWORD=${jdbc_username}
+  volumes:
+    - $PWD/sonar/sonar-db/volumes/data:/var/lib/postgresql/data
+  deploy:
+    replicas: 6
+    update_config:
+      parallelism: 2
+      delay: 10s
+    restart_policy:
+      condition: on-failure
+
+ gitlab:
+  image: gitlab/gitlab-ce:8.14.4-ce.0
+  networks:
+    - prodnetwork
+  environment:
+    GITLAB_OMNIBUS_CONFIG: |
+      # external_url 'https://gitlab.example.com'
+      # Add any other gitlab.rb configuration here, each on its own line
+	  ports:
+    - "80:80"
+    - "443:443"
+    - "2222:22"
+  volumes:
+    - /opt/gitlab/config:/etc/gitlab
+    - /opt/gitlab/logs:/var/log/gitlab
+    - /opt/gitlab/data:/var/opt/gitlab
+  deploy:
+    replicas: 6
+    update_config:
+      parallelism: 2
+      delay: 10s
+    restart_policy:
+      condition: on-failure

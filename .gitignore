@@ -1,0 +1,4 @@
+docker-compose.yaml
+docker-compose.yml
+**/*.bak
+**/edjanger.properties
